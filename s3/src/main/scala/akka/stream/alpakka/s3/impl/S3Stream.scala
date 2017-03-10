@@ -84,7 +84,10 @@ private[alpakka] final class S3Stream(credentials: AWSCredentials, region: Strin
           } else
             keys
         })
-    fileSourceFromFuture(listBucketCall())
+    fileSourceFromFuture(listBucketCall()).recoverWithRetries(3, {
+      case _: S3Exception =>
+        fileSourceFromFuture(listBucketCall())
+    })
   }
 
   def download(s3Location: S3Location): Source[ByteString, NotUsed] = {
