@@ -77,7 +77,10 @@ private[alpakka] final class S3Stream(credentials: AWSCredentials, region: Strin
         .flatMapConcat(res => {
           val keys = Source.fromIterator(() => res.keys.toIterator)
           if (res.is_truncated) {
-            keys.concat(fileSourceFromFuture(listBucketCall(res.continuation_token)))
+            keys.concat(fileSourceFromFuture(listBucketCall(res.continuation_token)).recoverWithRetries(3, {
+              case _: S3Exception =>
+                fileSourceFromFuture(listBucketCall(res.continuation_token))
+            }))
           } else
             keys
         })
