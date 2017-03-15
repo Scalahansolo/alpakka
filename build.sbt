@@ -66,10 +66,10 @@ lazy val mqtt = project
 lazy val s3 = project
   .enablePlugins(AutomateHeaderPlugin)
   .settings(
-    name := "akka-stream-alpakka-s3",
+    version := "0.4.1",
+    name := "akka-stream-alpakka-s3-fork",
     Dependencies.S3
   )
-
 lazy val simpleCodecs = project
   .in(file("simple-codecs"))
   .enablePlugins(AutomateHeaderPlugin)

@@ -42,9 +42,7 @@ private[alpakka] object HttpRequests {
       }
     }
 
-    HttpRequest(HttpMethods.GET)
-      .withHeaders(Host(requestHost(region)))
-      .withUri(uri)
+    HttpRequest(HttpMethods.GET).withHeaders(Host(requestHost(region))).withUri(uri)
   }
 
   def getDownloadRequest(s3Location: S3Location, region: String)(implicit conf: S3Settings): HttpRequest =
@@ -124,8 +122,6 @@ private[alpakka] object HttpRequests {
       }
     }
 
-    HttpRequest(method)
-      .withHeaders(Host(requestHost(region)))
-      .withUri(uriFn(requestUri(s3Location, region)))
+    HttpRequest(method).withHeaders(Host(requestHost(region))).withUri(uriFn(requestUri(s3Location, region)))
   }
 }

@@ -67,25 +67,27 @@ private[alpakka] final class S3Stream(credentials: AWSCredentials, region: Strin
    */
   def listBucket(bucket: String, prefix: Option[String] = None): Source[String, NotUsed] = {
     import mat.executionContext
-    def listBucketCall(continuation_token: Option[String] = None) =
+    def listBucketCall(continuation_token: Option[String] = None): Future[ListBucketResult] =
       signAndGet(HttpRequests.listBucket(bucket, region, prefix, continuation_token)).flatMap { entity =>
         Unmarshal(entity).to[ListBucketResult]
       }
+
     def fileSourceFromFuture(f: Future[ListBucketResult]): Source[String, NotUsed] =
       Source
         .fromFuture(f)
-        .flatMapConcat(res => {
+        .flatMapConcat((res: ListBucketResult) => {
           val keys = Source.fromIterator(() => res.keys.toIterator)
           if (res.is_truncated) {
             keys.concat(fileSourceFromFuture(listBucketCall(res.continuation_token)).recoverWithRetries(3, {
-              case _: S3Exception =>
+              case _: Throwable =>
                 fileSourceFromFuture(listBucketCall(res.continuation_token))
             }))
           } else
             keys
         })
+
     fileSourceFromFuture(listBucketCall()).recoverWithRetries(3, {
-      case _: S3Exception =>
+      case _: Throwable =>
         fileSourceFromFuture(listBucketCall())
     })
   }
@@ -258,8 +260,13 @@ private[alpakka] final class S3Stream(credentials: AWSCredentials, region: Strin
     resp match {
       case HttpResponse(status, _, entity, _) if status.isSuccess() => Future.successful(entity)
       case HttpResponse(status, _, entity, _) =>
-        Unmarshal(entity).to[String].flatMap {
-          case err => Future.failed(new S3Exception(err))
+        Unmarshal(entity).to[String].flatMap { err =>
+          Future.failed(try {
+            new S3Exception(err)
+          } catch {
+            case ex: Throwable =>
+              new RuntimeException(s"Could not parse failed response into an S3Exception. Error: $err", ex)
+          })
         }
     }
 }
