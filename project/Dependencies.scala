@@ -170,7 +170,6 @@ object Dependencies {
   val Sse = Seq(
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-http"         % AkkaHttpVersion,
-      "de.heikoseeberger" %% "akka-sse"          % "3.0.0", // ApacheV2
       "com.typesafe.akka" %% "akka-http-testkit" % AkkaHttpVersion % Test
     )
   )
