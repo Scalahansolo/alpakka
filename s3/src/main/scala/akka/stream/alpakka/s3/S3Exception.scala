@@ -6,7 +6,9 @@ package akka.stream.alpakka.s3
 import scala.xml.{Elem, XML}
 
 class S3Exception(val code: String, val message: String, val requestID: String, val hostId: String)
-    extends RuntimeException(message) {
+    extends RuntimeException(
+      s"S3 request failed: code: $code, message: $message, requestId: $requestID, hostId: $hostId"
+    ) {
 
   def this(xmlResponse: Elem) =
     this((xmlResponse \ "Code").text,

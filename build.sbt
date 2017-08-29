@@ -151,7 +151,8 @@ lazy val mqtt = project
 lazy val s3 = project
   .enablePlugins(AutomateHeaderPlugin)
   .settings(
-    name := "akka-stream-alpakka-s3",
+    version := "0.6.4",
+    name := "akka-stream-alpakka-s3-fork",
     Dependencies.S3
   )
 

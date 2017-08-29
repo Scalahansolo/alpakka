@@ -32,7 +32,7 @@ private[alpakka] object HttpRequests {
     )
 
     HttpRequest(HttpMethods.GET)
-      .withHeaders(Host(requestHost(bucket, conf.s3Region)))
+      .withHeaders(Host(requestHostIgnoreProxy(bucket, conf.s3Region))) // don't put proxy host (e.g. localhost) as Host Header since it is what the Signer uses for AWS signature and will get rejected by AWS!
       .withUri(requestUri(bucket, None).withQuery(query))
   }
 
@@ -84,27 +84,32 @@ private[alpakka] object HttpRequests {
                               method: HttpMethod = HttpMethods.GET,
                               uriFn: (Uri => Uri) = identity)(implicit conf: S3Settings): HttpRequest =
     HttpRequest(method)
-      .withHeaders(Host(requestHost(s3Location.bucket, conf.s3Region)))
+      .withHeaders(Host(requestHostIgnoreProxy(s3Location.bucket, conf.s3Region))) // don't put proxy host (e.g. localhost) as Host Header since it is what the Signer uses for AWS signature and will get rejected by AWS!
       .withUri(uriFn(requestUri(s3Location.bucket, Some(s3Location.key))))
 
   private[this] def requestHost(bucket: String, region: String)(implicit conf: S3Settings): Uri.Host =
     conf.proxy match {
       case None =>
-        region match {
-          case "us-east-1" =>
-            if (conf.pathStyleAccess) {
-              Uri.Host("s3.amazonaws.com")
-            } else {
-              Uri.Host(s"$bucket.s3.amazonaws.com")
-            }
-          case _ =>
-            if (conf.pathStyleAccess) {
-              Uri.Host(s"s3-$region.amazonaws.com")
-            } else {
-              Uri.Host(s"$bucket.s3-$region.amazonaws.com")
-            }
+        requestHostIgnoreProxy(bucket, region)
+      case Some(proxy) =>
+        Uri.Host(proxy.host)
+    }
+
+  // useful for setting the Host header correctly with AWS host when proxy is enabled
+  private[this] def requestHostIgnoreProxy(bucket: String, region: String)(implicit conf: S3Settings): Uri.Host =
+    region match {
+      case "us-east-1" =>
+        if (conf.pathStyleAccess) {
+          Uri.Host("s3.amazonaws.com")
+        } else {
+          Uri.Host(s"$bucket.s3.amazonaws.com")
         }
-      case Some(proxy) => Uri.Host(proxy.host)
+      case _ =>
+        if (conf.pathStyleAccess) {
+          Uri.Host(s"s3-$region.amazonaws.com")
+        } else {
+          Uri.Host(s"$bucket.s3-$region.amazonaws.com")
+        }
     }
 
   private[this] def requestUri(bucket: String, key: Option[String])(implicit conf: S3Settings): Uri = {
